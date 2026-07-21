@@ -10,6 +10,25 @@ against these byte sequences in `LaunchpadProtocolTest`.
 
 All multi-byte values are hex. MIDI channel 1 = status low-nibble 0.
 
+## Two USB-MIDI interfaces — use the right one
+
+An MK3-era Launchpad exposes **two** MIDI in/out interfaces over USB:
+
+- **DAW** interface (the *first* one) — used by DAWs for Session mode. It does **not** accept
+  Programmer-mode LED control.
+- **MIDI** interface (the *second* one) — the one that receives Custom-mode / Programmer-mode input
+  and accepts LED control.
+
+**LED writes must go to the MIDI interface, not the DAW interface.** Sending Programmer-mode LED
+messages to the DAW port silently does nothing (the device stays in its default lighting), which
+looks like a flaky or half-working connection.
+
+Picking the right port is platform-specific:
+- **JVM** (`javax.sound.midi`): the ports carry names — select the one whose name contains `MIDI`
+  and skip `DAW`/`DIN`.
+- **Android** (`android.media.midi`): port names are empty. The port order follows the USB
+  interface order, so the **second (last)** input/output port pair is the MIDI interface.
+
 ## SysEx header
 
 Every device SysEx starts with:

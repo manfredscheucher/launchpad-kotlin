@@ -54,9 +54,14 @@ actual class MidiTransport actual constructor() {
         manager.openDevice(target, { opened ->
             device = opened
             if (opened != null) {
-                // Open the first input port (to send) and first output port (to receive).
-                val inPortInfo = target.ports.firstOrNull { it.type == AndroidMidiDeviceInfo.PortInfo.TYPE_INPUT }
-                val outPortInfo = target.ports.firstOrNull { it.type == AndroidMidiDeviceInfo.PortInfo.TYPE_OUTPUT }
+                // The Launchpad Mini MK3 exposes TWO interfaces (see the Programmer's Reference,
+                // "MIDI on Launchpad Mini [MK3]"): the FIRST is the "DAW" interface (Session mode),
+                // the SECOND is the "MIDI" interface — and only the MIDI interface accepts
+                // Programmer-mode LED control. So we must use the SECOND (last) input/output port
+                // pair, not the first. Android port names are empty, but the port order follows the
+                // USB interface order, so the last TYPE_INPUT/TYPE_OUTPUT is the MIDI interface.
+                val inPortInfo = target.ports.lastOrNull { it.type == AndroidMidiDeviceInfo.PortInfo.TYPE_INPUT }
+                val outPortInfo = target.ports.lastOrNull { it.type == AndroidMidiDeviceInfo.PortInfo.TYPE_OUTPUT }
                 inPortInfo?.let { inputPort = opened.openInputPort(it.portNumber) }
                 outPortInfo?.let { pi ->
                     outputPort = opened.openOutputPort(pi.portNumber)?.also { op ->
@@ -81,14 +86,15 @@ actual class MidiTransport actual constructor() {
     actual fun send(message: ByteArray) {
         val port = inputPort ?: error("Transport not open")
         port.send(message, 0, message.size)
-        // Match the JVM transport: pace bulk sends so a 64-pad repaint isn't dropped/reordered by the
-        // Android MIDI stack, which delivers asynchronously.
-        runCatching { Thread.sleep(0, 400_000) } // 0.4 ms
     }
 
     actual fun setReceiver(onMessage: ((ByteArray) -> Unit)?) { this.onMessage = onMessage }
 
     actual fun close() {
+        // Let the just-sent messages (the clear + return-to-Live-mode from disconnect) flush to the
+        // device before we tear the port down — otherwise closing races those sends and the board is
+        // left in a partial state (some rows still lit). Mirrors the JVM transport's flush settle.
+        runCatching { Thread.sleep(60) }
         runCatching { inputPort?.close() }
         runCatching { outputPort?.close() }
         runCatching { device?.close() }
@@ -106,8 +112,4 @@ actual class MidiTransport actual constructor() {
 object LaunchpadAndroid {
     @Volatile internal var context: Context? = null
     fun init(context: Context) { this.context = context.applicationContext }
-}
-
-actual fun settleAfterModeSwitch() {
-    runCatching { Thread.sleep(80) }
 }

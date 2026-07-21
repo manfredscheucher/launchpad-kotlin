@@ -41,7 +41,6 @@ class Launchpad(private val transport: MidiTransport = MidiTransport()) {
         transport.open(device.id)
         transport.setReceiver { raw -> handleIncoming(raw) }
         transport.send(LaunchpadProtocol.enterProgrammerMode(model))
-        settleAfterModeSwitch()  // let the device enter Programmer mode before the first LED write
         clear()
     }
 

@@ -38,11 +38,3 @@ expect class MidiTransport() {
     /** Close ports and release the device. Safe to call when not open. */
     fun close()
 }
-
-/**
- * Brief blocking pause to let a Launchpad finish switching into Programmer mode before the first
- * LED write. The mode switch is asynchronous in the device firmware (a few ms), and some MIDI stacks
- * (notably Android's) don't serialise it against the immediately-following note-ons, so without this
- * the very first connect+paint can land while the device is still in Live mode and show nothing.
- */
-expect fun settleAfterModeSwitch()
