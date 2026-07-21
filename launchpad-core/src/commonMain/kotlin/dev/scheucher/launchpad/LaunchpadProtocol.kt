@@ -87,6 +87,35 @@ object LaunchpadProtocol {
     // RGB data bytes (0..127 per channel). The type byte (3) is written by the caller.
     private fun MutableList<Int>.addRgb(c: LpColor) { add(c.r); add(c.g); add(c.b) }
 
+    /**
+     * Encode a batch of [instructions] into a single "LED lighting" SysEx frame (command 0x03) using
+     * the PALETTE colour types (0=static, 1=flash, 2=pulse) — one data byte per pad. This is the
+     * reliable batched path: it repaints the whole board in ONE USB write (no per-pad Note-On burst
+     * that some MIDI stacks drop/reorder) AND it uses palette entries (unlike [ledSysex], whose RGB
+     * type 3 did not light LEDs on all hosts). Static pads carry the palette index directly.
+     *
+     * A frame holds at most ~81 colourspecs (each 1 type + 1 index + 1 data = 3 bytes); a full 64-pad
+     * board fits comfortably. Callers with more should chunk.
+     */
+    fun ledSysexPalette(model: LaunchpadModel, instructions: List<LedInstruction>): ByteArray {
+        val body = ArrayList<Int>(instructions.size * 3 + 8)
+        body.addAll(header(model).asList())
+        body.add(0x03)
+        for (ins in instructions) {
+            when (val l = ins.lighting) {
+                is Lighting.Static -> { body.add(0); body.add(ins.ledIndex); body.add(l.color.paletteIndex) }
+                is Lighting.Pulsing -> { body.add(2); body.add(ins.ledIndex); body.add(l.color.paletteIndex) }
+                is Lighting.Flashing -> {
+                    body.add(1); body.add(ins.ledIndex)
+                    body.add(l.alt.paletteIndex)
+                    body.add(l.color.paletteIndex)
+                }
+            }
+        }
+        body.add(SYSEX_END)
+        return body.toBytes()
+    }
+
     // ---- Alternative: simple palette note-on (used for edge buttons via CC) -----------------
 
     /** Light an edge [button] to a palette [velocity] (0 = off) using a Control-Change message. */

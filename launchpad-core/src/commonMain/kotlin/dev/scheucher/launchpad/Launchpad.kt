@@ -41,6 +41,7 @@ class Launchpad(private val transport: MidiTransport = MidiTransport()) {
         transport.open(device.id)
         transport.setReceiver { raw -> handleIncoming(raw) }
         transport.send(LaunchpadProtocol.enterProgrammerMode(model))
+        settleAfterModeSwitch()  // let the device enter Programmer mode before the first LED write
         clear()
     }
 
@@ -76,6 +77,17 @@ class Launchpad(private val transport: MidiTransport = MidiTransport()) {
             val pad = LaunchpadProtocol.padForNote(ins.ledIndex) ?: continue
             transport.send(paletteNoteOn(pad, ins.lighting))
         }
+    }
+
+    /**
+     * Repaint a set of pads in ONE batched palette-SysEx frame (see [LaunchpadProtocol.ledSysexPalette]).
+     * Preferred for full-board repaints: a single USB write can't drop/reorder pads the way a burst of
+     * 64 individual Note-Ons can on some MIDI stacks, and it paints every pad (including the ones set to
+     * "off") so no stale/boot pattern survives underneath. Falls back to nothing if not connected.
+     */
+    fun renderBatched(instructions: List<LedInstruction>) {
+        if (instructions.isEmpty()) return
+        transport.send(LaunchpadProtocol.ledSysexPalette(model, instructions))
     }
 
     /** Light a single grid pad. */

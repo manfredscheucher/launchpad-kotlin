@@ -81,6 +81,9 @@ actual class MidiTransport actual constructor() {
     actual fun send(message: ByteArray) {
         val port = inputPort ?: error("Transport not open")
         port.send(message, 0, message.size)
+        // Match the JVM transport: pace bulk sends so a 64-pad repaint isn't dropped/reordered by the
+        // Android MIDI stack, which delivers asynchronously.
+        runCatching { Thread.sleep(0, 400_000) } // 0.4 ms
     }
 
     actual fun setReceiver(onMessage: ((ByteArray) -> Unit)?) { this.onMessage = onMessage }
@@ -103,4 +106,8 @@ actual class MidiTransport actual constructor() {
 object LaunchpadAndroid {
     @Volatile internal var context: Context? = null
     fun init(context: Context) { this.context = context.applicationContext }
+}
+
+actual fun settleAfterModeSwitch() {
+    runCatching { Thread.sleep(80) }
 }

@@ -52,6 +52,29 @@ class LaunchpadProtocolTest {
         assertEquals("f0 00 20 29 02 0d 03 03 0b 7f 00 00 f7", frame.hex())
     }
 
+    @Test fun paletteLedSysex_encodesStaticPulseFlashTypes() {
+        // Static (type 0, 1 byte), pulse (type 2, 1 byte), flash (type 1, 2 bytes: alt then colour).
+        val frame = LaunchpadProtocol.ledSysexPalette(
+            LaunchpadModel.MINI_MK3,
+            listOf(
+                LedInstruction(11, Lighting.Static(LpColor.ofPalette(5))),   // 00 0B 05
+                LedInstruction(12, Lighting.Pulsing(LpColor.ofPalette(3))),  // 02 0C 03
+                LedInstruction(13, Lighting.Flashing(LpColor.ofPalette(21), LpColor.ofPalette(0))), // 01 0D 00 15
+            )
+        )
+        assertEquals("f0 00 20 29 02 0d 03 00 0b 05 02 0c 03 01 0d 00 15 f7", frame.hex())
+    }
+
+    @Test fun paletteLedSysex_fullBoardIsOneFrame() {
+        // A full 64-pad palette repaint must be a single well-formed SysEx frame (F0 … F7).
+        val all = (0..7).flatMap { y -> (0..7).map { x -> LedInstruction(LaunchpadProtocol.noteFor(Pad(x, y)), Lighting.Static(LpColor.OFF)) } }
+        val frame = LaunchpadProtocol.ledSysexPalette(LaunchpadModel.MINI_MK3, all)
+        assertEquals(0xF0, frame.first().toInt() and 0xFF)
+        assertEquals(0xF7, frame.last().toInt() and 0xFF)
+        // header(7) + 64*(type+index+data = 3) + end(1) = 200 bytes.
+        assertEquals(7 + 64 * 3 + 1, frame.size)
+    }
+
     @Test fun paletteNoteOn_matchesManualExample() {
         // Manual example: light lower-left pad static red => 90 0B 05.
         val bytes = LaunchpadProtocol.padNoteOn(Pad(0, 0), velocity = 5)

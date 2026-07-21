@@ -160,3 +160,7 @@ actual class MidiTransport actual constructor() {
             .trim()
     }
 }
+
+actual fun settleAfterModeSwitch() {
+    runCatching { Thread.sleep(80) }
+}
