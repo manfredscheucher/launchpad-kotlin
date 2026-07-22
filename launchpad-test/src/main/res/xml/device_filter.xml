@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Auto-launch when a Novation device is attached. Focusrite/Novation USB vendor-id is
-         0x1235 = 4661. (A Launchpad enumerates as a class-compliant USB-MIDI device under this
-         vendor.) The app itself further filters by MIDI name containing "Launchpad". -->
-    <usb-device vendor-id="4661" />
-</resources>

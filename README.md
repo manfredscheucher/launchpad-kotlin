@@ -91,7 +91,7 @@ A minimal on-device app that does the same smoke test — connect, paint the 8×
 light them white — for a Launchpad plugged into a USB-OTG phone.
 
 ```bash
-./gradlew :launchpad-test:installDebug   # then launch it, or plug in a Launchpad to auto-open it
+./gradlew :launchpad-test:installDebug   # then open the app and plug in a Launchpad
 ```
 
 It logs to the screen and to a file (`getExternalFilesDir/launchpad-test.log`), so you can inspect a

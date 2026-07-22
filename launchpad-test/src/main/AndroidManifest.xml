@@ -19,16 +19,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- Auto-launch this app when a matching USB device (Novation, see res/xml/device_filter)
-                 is attached, so plugging in a Launchpad starts the test directly. The <meta-data>
-                 device-filter is required — a bare USB_DEVICE_ATTACHED filter is ignored. -->
-            <intent-filter>
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-            </intent-filter>
-            <meta-data
-                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-                android:resource="@xml/device_filter" />
         </activity>
     </application>
 </manifest>

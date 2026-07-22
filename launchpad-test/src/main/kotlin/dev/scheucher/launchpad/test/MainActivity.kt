@@ -53,17 +53,24 @@ class MainActivity : Activity() {
             addView(logView)
             layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f)
         }
-        val buttonRow = LinearLayout(this).apply {
+        // Two rows of two buttons each (4 in one row gets too cramped on a phone).
+        val buttonRow1 = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
+            addView(button("Rescan") { rescan() }, equalWeight())
             addView(button("Connect + Paint") { connectAndPaint() }, equalWeight())
+        }
+        val buttonRow2 = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
             addView(button("Flash green") { flash() }, equalWeight())
             addView(button("Disconnect") { disconnect() }, equalWeight())
         }
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             fitsSystemWindows = true  // inset by status/navigation bars; no overlap, no hard-coded spacings
-            addView(buttonRow)
+            addView(buttonRow1)
+            addView(buttonRow2)
             addView(scroll)
         }
         setContentView(root)
@@ -78,6 +85,14 @@ class MainActivity : Activity() {
 
         log("launchpad-test — plug a Launchpad into the phone via USB-OTG, then tap Connect + Paint.")
         log("Log file: ${logFile?.absolutePath}")
+    }
+
+    /** List currently-connected Launchpads. Android re-enumerates on each query, so no restart is
+     *  needed after replugging — though Connect + Paint also re-queries, so this is just informational. */
+    private fun rescan() = thread(name = "lp-rescan") {
+        val devices = Launchpad().available()
+        if (devices.isEmpty()) log("Rescan: no Launchpad found. Plugged in and powered?")
+        else log("Rescan: ${devices.joinToString { "${it.name} [model=${it.model}]" }}")
     }
 
     private fun connectAndPaint() = thread(name = "lp-connect") {
