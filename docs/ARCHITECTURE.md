@@ -36,10 +36,17 @@ makes it fully unit-testable against the official Programmer's Reference byte se
 `setReceiver`, `close`. Each target provides its own `actual`:
 
 - **JVM (desktop)** — `javax.sound.midi`; pairs input/output ports by normalised name, filters to
-  the plain MIDI interface (skips DAW/DIN), and paces Note-On sends slightly to avoid reordering on
-  async MIDI stacks.
+  the plain MIDI interface (skips DAW/DIN — see below), and paces Note-On sends slightly to avoid
+  reordering on async MIDI stacks.
 - **Android** — `android.media.midi` (USB host). Requires a one-time `LaunchpadAndroid.init(context)`
-  (e.g. in `Application.onCreate`) because the platform MIDI manager needs a `Context`.
+  (e.g. in `Application.onCreate`) because the platform MIDI manager needs a `Context`. Port names
+  are empty here, so it can't filter by name — it opens the **second (last)** input/output port
+  pair, which is the MIDI interface (see below). `close()` flushes briefly before tearing the port
+  down so the clear + Live-mode messages on `disconnect` aren't cut off.
+
+> **Both platforms must open the MIDI interface, not the DAW one.** An MK3 Launchpad exposes two
+> USB-MIDI interfaces; only the second ("MIDI") accepts Programmer-mode LED control. Sending to the
+> DAW interface silently does nothing. See [PROTOCOL.md](PROTOCOL.md#two-usb-midi-interfaces--use-the-right-one).
 
 `Launchpad` is the high-level facade tying the three together: `connect` / `connectFirst`,
 `render(...)` / `setPad(...)` / `setButton(...)`, `clear`, `disconnect`, and input via a

@@ -72,6 +72,8 @@ them. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture and
 
 ## Try it against real hardware
 
+**Desktop (JVM):**
+
 ```bash
 ./gradlew :launchpad-demo:run
 ```
@@ -83,8 +85,21 @@ Lists connected devices, paints a colour gradient, and logs every pad/button pre
 > stack has SysEx quirks. No code change needed; device names just gain a `CoreMIDI4J - ` prefix,
 > which detection already handles.
 
-> **Android:** call `LaunchpadAndroid.init(context)` once (e.g. in `Application.onCreate`) before
-> constructing a `Launchpad`. Requires a phone with USB-OTG host support and Android 6.0+.
+**Android (`launchpad-test` app):**
+
+A minimal on-device app that does the same smoke test — connect, paint the 8×8 grid, press pads to
+light them white — for a Launchpad plugged into a USB-OTG phone.
+
+```bash
+./gradlew :launchpad-test:installDebug   # then launch it, or plug in a Launchpad to auto-open it
+```
+
+It logs to the screen and to a file (`getExternalFilesDir/launchpad-test.log`), so you can inspect a
+run with `adb pull` without keeping the debug cable attached while the Launchpad occupies the port.
+
+> **Using the library on Android:** call `LaunchpadAndroid.init(context)` once (e.g. in
+> `Application.onCreate`) before constructing a `Launchpad`. Requires a phone with USB-OTG host
+> support and Android 6.0+.
 
 ## License
 
