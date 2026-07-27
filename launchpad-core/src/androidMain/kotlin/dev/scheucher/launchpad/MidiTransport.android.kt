@@ -22,7 +22,10 @@ import android.os.Looper
  * before constructing a [Launchpad]. Device open is asynchronous on Android; [open] blocks briefly
  * for the callback to keep the common API simple.
  */
-actual class MidiTransport actual constructor() {
+/** The Android platform default: build a real MidiManager-backed transport. */
+actual fun MidiTransport(): MidiTransport = AndroidMidiTransport()
+
+class AndroidMidiTransport : MidiTransport {
 
     private val appContext: Context =
         LaunchpadAndroid.context ?: error(
@@ -37,7 +40,7 @@ actual class MidiTransport actual constructor() {
     private var outputPort: MidiOutputPort? = null    // device -> host (we receive here)
     private var onMessage: ((ByteArray) -> Unit)? = null
 
-    actual fun listDevices(): List<MidiDeviceInfo> =
+    override fun listDevices(): List<MidiDeviceInfo> =
         manager.devices.mapNotNull { info ->
             val name = deviceName(info) ?: return@mapNotNull null
             if (!name.lowercase().contains("launchpad")) return@mapNotNull null
@@ -45,7 +48,7 @@ actual class MidiTransport actual constructor() {
             MidiDeviceInfo(id = info.id.toString(), name = name)
         }
 
-    actual fun open(deviceId: String) {
+    override fun open(deviceId: String) {
         close()
         val target = manager.devices.firstOrNull { it.id.toString() == deviceId }
             ?: error("MIDI device '$deviceId' not found")
@@ -81,16 +84,16 @@ actual class MidiTransport actual constructor() {
         checkNotNull(inputPort) { "Failed to open MIDI input port for '$deviceId'" }
     }
 
-    actual fun isOpen(): Boolean = inputPort != null
+    override fun isOpen(): Boolean = inputPort != null
 
-    actual fun send(message: ByteArray) {
+    override fun send(message: ByteArray) {
         val port = inputPort ?: error("Transport not open")
         port.send(message, 0, message.size)
     }
 
-    actual fun setReceiver(onMessage: ((ByteArray) -> Unit)?) { this.onMessage = onMessage }
+    override fun setReceiver(onMessage: ((ByteArray) -> Unit)?) { this.onMessage = onMessage }
 
-    actual fun close() {
+    override fun close() {
         // Let the just-sent messages (the clear + return-to-Live-mode from disconnect) flush to the
         // device before we tear the port down — otherwise closing races those sends and the board is
         // left in a partial state (some rows still lit). Mirrors the JVM transport's flush settle.

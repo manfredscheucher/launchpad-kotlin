@@ -12,14 +12,17 @@ data class MidiDeviceInfo(
 )
 
 /**
- * The single platform seam. Each target (JVM via javax.sound.midi, Android via MidiManager, later
- * native via RtMidi) provides an `actual` implementation. Everything above this — protocol, colour
- * coding, chess rendering — is common Kotlin.
+ * The single platform seam, as an INTERFACE so it can be substituted — e.g. by [FakeMidiTransport]
+ * for tests/simulation (drive the whole real Launchpad stack, protocol + listener, with no hardware),
+ * or by a different backend. Each target (JVM via javax.sound.midi, Android via MidiManager, later
+ * native via RtMidi) provides a concrete implementation; the platform default is built by the
+ * [MidiTransport] factory below. Everything above this — protocol, colour coding, chess rendering —
+ * is common Kotlin.
  *
  * Implementations are expected to be usable from a single thread for sending; [setReceiver] may be
  * invoked from a MIDI callback thread, so consumers should hand off to their own dispatcher.
  */
-expect class MidiTransport() {
+interface MidiTransport {
     /** Enumerate connected Launchpad-capable devices (both an input and output port present). */
     fun listDevices(): List<MidiDeviceInfo>
 
@@ -38,3 +41,6 @@ expect class MidiTransport() {
     /** Close ports and release the device. Safe to call when not open. */
     fun close()
 }
+
+/** The real, platform-backed transport (JVM: javax.sound.midi; Android: MidiManager). */
+expect fun MidiTransport(): MidiTransport

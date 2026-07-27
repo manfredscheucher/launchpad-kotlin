@@ -20,7 +20,10 @@ import javax.sound.midi.Transmitter
  * coremidi4j) — it registers as an SPI and this code needs no changes; its device names are simply
  * prefixed with "CoreMIDI4J - ", which [LaunchpadModel.detect] still matches on the model substring.
  */
-actual class MidiTransport actual constructor() {
+/** The JVM platform default: build a real javax.sound.midi-backed transport. */
+actual fun MidiTransport(): MidiTransport = JvmMidiTransport()
+
+class JvmMidiTransport : MidiTransport {
 
     private var outDevice: MidiDevice? = null
     private var inDevice: MidiDevice? = null
@@ -28,7 +31,7 @@ actual class MidiTransport actual constructor() {
     private var transmitter: Transmitter? = null
     private var onMessage: ((ByteArray) -> Unit)? = null
 
-    actual fun listDevices(): List<MidiDeviceInfo> {
+    override fun listDevices(): List<MidiDeviceInfo> {
         // Pair a Launchpad's ports by INTERFACE type. Modern Launchpads expose several interfaces
         // (e.g. "MIDI" and "DAW" on the Mini MK3); only the plain MIDI interface accepts Programmer
         // -mode LED control, so DAW/DIN are skipped — matching the digitalfritz driver behaviour.
@@ -56,7 +59,7 @@ actual class MidiTransport actual constructor() {
             .map { (key, g) -> MidiDeviceInfo(id = key, name = g.rawName) }
     }
 
-    actual fun open(deviceId: String) {
+    override fun open(deviceId: String) {
         close()
         val infos = MidiSystem.getMidiDeviceInfo()
         var outInfo: MidiDevice.Info? = null
@@ -93,9 +96,9 @@ actual class MidiTransport actual constructor() {
         }
     }
 
-    actual fun isOpen(): Boolean = outDevice?.isOpen == true
+    override fun isOpen(): Boolean = outDevice?.isOpen == true
 
-    actual fun send(message: ByteArray) {
+    override fun send(message: ByteArray) {
         val rx = receiverOut ?: error("Transport not open")
         val first = if (message.isNotEmpty()) message[0].toInt() and 0xFF else 0
         val msg: MidiMessage = if (first == 0xF0) {
@@ -115,9 +118,9 @@ actual class MidiTransport actual constructor() {
         runCatching { Thread.sleep(0, 400_000) } // 0.4 ms
     }
 
-    actual fun setReceiver(onMessage: ((ByteArray) -> Unit)?) { this.onMessage = onMessage }
+    override fun setReceiver(onMessage: ((ByteArray) -> Unit)?) { this.onMessage = onMessage }
 
-    actual fun close() {
+    override fun close() {
         // Let any just-sent messages (e.g. the clear + return-to-Live-mode on disconnect) flush to
         // the device before we tear the port down — otherwise closing races the send and the board
         // can be left lit. javax.sound.midi has no explicit flush, so a brief settle is the pragmatic

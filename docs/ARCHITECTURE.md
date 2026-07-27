@@ -14,7 +14,7 @@ Launchpad (facade)  ──►  LaunchpadListener  (input callbacks)
 LaunchpadProtocol   (pure functions, no I/O — fully unit-tested)
     │  ByteArray
     ▼
-MidiTransport       (expect/actual: open / list / send / receive / close)
+MidiTransport       (interface: open / list / send / receive / close; real via expect fun factory, or FakeMidiTransport)
     │  raw MIDI
     ▼
 Device (USB MIDI)
@@ -32,8 +32,11 @@ id, edge-button CC numbers). No MIDI bytes appear here.
 makes it fully unit-testable against the official Programmer's Reference byte sequences
 (`LaunchpadProtocolTest`).
 
-**`MidiTransport`** — the one `expect/actual` platform seam: `open`, `listDevices`, `send`,
-`setReceiver`, `close`. Each target provides its own `actual`:
+**`MidiTransport`** — the one platform seam: `open`, `listDevices`, `send`, `setReceiver`, `close`.
+It is a plain `interface`, so it can be substituted — the real backend is built by the
+`expect fun MidiTransport()` factory, while [`FakeMidiTransport`](../launchpad-core/src/commonMain/kotlin/dev/scheucher/launchpad/FakeMidiTransport.kt)
+(common, no hardware) drives the whole stack in tests/simulation (see the README "Test / simulate
+without hardware"). Each target provides its own factory implementation:
 
 - **JVM (desktop)** — `javax.sound.midi`; pairs input/output ports by normalised name, filters to
   the plain MIDI interface (skips DAW/DIN — see below), and paces Note-On sends slightly to avoid
@@ -55,8 +58,9 @@ makes it fully unit-testable against the official Programmer's Reference byte se
 ## Adding a platform
 
 Adding Native (Linux/macOS/Windows via RtMidi/PortMidi) or JS/Wasm (Web MIDI) means adding one new
-`actual MidiTransport` for that target. The domain model and `LaunchpadProtocol` are shared unchanged
-— that is the point of keeping all I/O behind the transport seam.
+`MidiTransport` implementation for that target plus its `actual fun MidiTransport()` factory. The
+domain model and `LaunchpadProtocol` are shared unchanged — that is the point of keeping all I/O
+behind the transport seam.
 
 ## Relationship to launchpad-cpp
 

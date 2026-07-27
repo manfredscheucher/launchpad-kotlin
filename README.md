@@ -66,9 +66,36 @@ the reliable LED path across MIDI stacks is palette Note-On, not per-channel RGB
 
 Three cleanly separated layers — a hardware-independent domain model, the pure
 [`LaunchpadProtocol`](docs/PROTOCOL.md) wire encoder/decoder (fully unit-tested, no hardware), and
-the one `expect/actual` `MidiTransport` platform seam. `Launchpad` is the high-level facade over
-them. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full picture and
-[docs/PROTOCOL.md](docs/PROTOCOL.md) for the wire spec.
+the one `MidiTransport` platform seam (a plain `interface`; the real backend is built by the
+`expect fun MidiTransport()` factory — JVM via `javax.sound.midi`, Android via `MidiManager`).
+`Launchpad` is the high-level facade over them. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for
+the full picture and [docs/PROTOCOL.md](docs/PROTOCOL.md) for the wire spec.
+
+## Test / simulate without hardware
+
+Because `MidiTransport` is an interface, you can drive the **whole real stack** — `Launchpad`,
+`LaunchpadProtocol` encode/decode, and the `LaunchpadListener` input path — with no physical device,
+using the built-in [`FakeMidiTransport`](launchpad-core/src/commonMain/kotlin/dev/scheucher/launchpad/FakeMidiTransport.kt).
+Pass it to `Launchpad` and both directions work through the same protocol the hardware uses:
+
+```kotlin
+val fake = FakeMidiTransport()                 // a simulated Launchpad Mini MK3
+val lp = Launchpad(fake)
+lp.connect(fake.listDevices().first())
+
+// OUTPUT — what the board WOULD show is captured and decoded back to (pad -> palette colour):
+lp.setPad(Pad(2, 3), LpColor.ofPalette(5))
+check(fake.colorAt(Pad(2, 3)) == 5)            // covers setPad AND renderBatched
+
+// INPUT — simulate a physical pad press; it flows through the real decoder to your listener:
+lp.setListener(object : LaunchpadListener {
+    override fun onPad(pad: Pad, pressed: Boolean) { /* ... */ }
+})
+fake.emitPad(Pad(4, 1), pressed = true)
+```
+
+This is the recommended way to unit-test app logic that reacts to pad input or asserts board output
+(see `FakeMidiTransportTest`). It needs no MIDI subsystem, so it runs anywhere the library does.
 
 ## Try it against real hardware
 
