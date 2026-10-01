@@ -10,5 +10,5 @@ dependencies {
 }
 
 application {
-    mainClass.set("dev.scheucher.launchpad.demo.MainKt")
+    mainClass.set("org.bytefred.launchpad.demo.MainKt")
 }

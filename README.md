@@ -32,7 +32,7 @@ includeBuild("launchpad-kotlin")
 
 ```kotlin
 // your module's build.gradle.kts
-dependencies { implementation("dev.scheucher.launchpad:launchpad-core") }
+dependencies { implementation("org.bytefred.launchpad:launchpad-core") }
 ```
 
 ## Usage
@@ -48,6 +48,43 @@ lp.setListener(object : LaunchpadListener {
 lp.setPad(Pad(0, 0), Lighting.Pulsing(LpColor.BLUE))   // bottom-left pad pulses blue
 lp.disconnect()                                    // clears LEDs, restores Live mode
 ```
+
+## FAQ / Troubleshooting
+
+### ⚠️ Only some pads light up, colours look wrong, or the board shows a factory/garbage pattern
+
+**By far the most common problem, and it bites everyone: you opened the wrong USB MIDI port.**
+
+A Launchpad Mini MK3 (and Pro / X) exposes **two MIDI interfaces per direction** over one USB cable:
+
+| Port name (varies by OS) | Purpose | Accepts Programmer-mode LED control? |
+|--------------------------|---------|--------------------------------------|
+| `…LPMiniMK3 MIDI…` (the **MIDI** interface) | note/LED I/O | ✅ **yes — use this one** |
+| `…LPMiniMK3 DAW…` (the **DAW** interface) | DAW session control (Ableton) | ❌ **no — silently ignores your LED writes** |
+
+If you send LED commands to the **DAW** port, the device **silently drops them** — no error, nothing
+throws. The symptom is exactly "the board lights up wrong": factory-default lighting, garbage, or only
+a few pads reacting. It is **not** a protocol bug, a palette bug, or bad wiring — it's the wrong port.
+
+**This library already picks the right port for you** — the JVM transport filters ports to the `MIDI`
+interface and skips `DAW`/`DIN` (see
+[`MidiTransport.jvm.kt`](launchpad-core/src/jvmMain/kotlin/org.bytefred/launchpad/MidiTransport.jvm.kt),
+the `interfaceType(name) != InterfaceType.MIDI` guard). So with `launchpad-kotlin` you shouldn't hit
+this. But **if you write your own MIDI code, or use another library/DAW, this is the first thing to
+check.** Enumerate the ports and open the one whose name contains `MIDI`, never `DAW`.
+
+> Same gotcha, same fix in the C++ sibling — see [launchpad-cpp](https://github.com/manfredscheucher/launchpad-cpp).
+
+### Batched SysEx repaint is unreliable on the Mini MK3 — prefer per-pad Note-On
+
+Painting the whole grid in one SysEx frame (`renderBatched`) can drop or reorder LEDs on the Mini MK3,
+leaving pads the wrong colour. The reliable path is one **palette Note-On per pad** (`setPad` / the
+per-pad `render` list). If a full-board repaint looks partial or garbled, switch to per-pad writes.
+
+### macOS: the device doesn't appear at all
+
+Apple's default MIDI SPI has SysEx quirks. Add the [CoreMidi4J](https://github.com/DerekCook/CoreMidi4J)
+SPI (no code change — names just gain a `CoreMIDI4J - ` prefix, which detection handles).
 
 ### Colours
 
@@ -75,7 +112,7 @@ the full picture and [docs/PROTOCOL.md](docs/PROTOCOL.md) for the wire spec.
 
 Because `MidiTransport` is an interface, you can drive the **whole real stack** — `Launchpad`,
 `LaunchpadProtocol` encode/decode, and the `LaunchpadListener` input path — with no physical device,
-using the built-in [`FakeMidiTransport`](launchpad-core/src/commonMain/kotlin/dev/scheucher/launchpad/FakeMidiTransport.kt).
+using the built-in [`FakeMidiTransport`](launchpad-core/src/commonMain/kotlin/org.bytefred/launchpad/FakeMidiTransport.kt).
 Pass it to `Launchpad` and both directions work through the same protocol the hardware uses:
 
 ```kotlin

@@ -7,11 +7,11 @@ plugins {
 // launch the app, and it runs the same flow as launchpad-demo — connect, paint the grid, echo pad
 // presses into an on-screen log. Deliberately plain Android (no Compose) to stay tiny.
 android {
-    namespace = "dev.scheucher.launchpad.test"
+    namespace = "org.bytefred.launchpad.test"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "dev.scheucher.launchpad.test"
+        applicationId = "org.bytefred.launchpad.test"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

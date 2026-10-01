@@ -4,7 +4,7 @@ plugins {
 }
 
 // Coordinates used by consumers (incl. kotlichess via composite build substitution).
-group = "dev.scheucher.launchpad"
+group = "org.bytefred.launchpad"
 version = "0.1.0"
 
 // launchpad-core: generic, transport-agnostic KMP interface to Novation Launchpad devices.
@@ -22,7 +22,7 @@ kotlin {
 }
 
 android {
-    namespace = "dev.scheucher.launchpad"
+    namespace = "org.bytefred.launchpad"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()

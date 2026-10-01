@@ -34,7 +34,7 @@ makes it fully unit-testable against the official Programmer's Reference byte se
 
 **`MidiTransport`** — the one platform seam: `open`, `listDevices`, `send`, `setReceiver`, `close`.
 It is a plain `interface`, so it can be substituted — the real backend is built by the
-`expect fun MidiTransport()` factory, while [`FakeMidiTransport`](../launchpad-core/src/commonMain/kotlin/dev/scheucher/launchpad/FakeMidiTransport.kt)
+`expect fun MidiTransport()` factory, while [`FakeMidiTransport`](../launchpad-core/src/commonMain/kotlin/org.bytefred/launchpad/FakeMidiTransport.kt)
 (common, no hardware) drives the whole stack in tests/simulation (see the README "Test / simulate
 without hardware"). Each target provides its own factory implementation:
 

@@ -6,5 +6,5 @@ plugins {
     alias(libs.plugins.androidApplication) apply false
 }
 
-group = "dev.scheucher.launchpad"
+group = "org.bytefred.launchpad"
 version = "0.1.0"
